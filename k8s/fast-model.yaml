@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fast-model
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fast-model
+  template:
+    metadata:
+      labels:
+        app: fast-model
+    spec:
+      containers:
+      - name: fast-model
+        image: fast-model:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8002
+        env:
+        - name: MODEL_ARCH
+          value: "resnet50"
+        - name: MODEL_LABEL
+          value: "Model B - Optimized Fast ResNet50"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fast-model-service
+spec:
+  selector:
+    app: fast-model
+  ports:
+  - port: 8002
+    targetPort: 8002

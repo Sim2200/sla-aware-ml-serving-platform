@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sla-router
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sla-router
+  template:
+    metadata:
+      labels:
+        app: sla-router
+    spec:
+      containers:
+      - name: sla-router
+        image: sla-router:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+        env:
+        - name: HIGH_MODEL_URL
+          value: "http://high-model-service:8001"
+        - name: FAST_MODEL_URL
+          value: "http://fast-model-service:8002"
+        - name: P95_LATENCY_THRESHOLD
+          value: "8.0"
+        - name: CPU_THRESHOLD
+          value: "75.0"
+        - name: ERROR_RATE_THRESHOLD
+          value: "0.05"
+        - name: IN_FLIGHT_THRESHOLD
+          value: "1"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sla-router-service
+spec:
+  selector:
+    app: sla-router
+  ports:
+  - port: 8000
+    targetPort: 8000

@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: high-model
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: high-model
+  template:
+    metadata:
+      labels:
+        app: high-model
+    spec:
+      containers:
+      - name: high-model
+        image: high-model:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8001
+        env:
+        - name: MODEL_ARCH
+          value: "resnet101"
+        - name: MODEL_LABEL
+          value: "Model A - High Accuracy ResNet101"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: high-model-service
+spec:
+  selector:
+    app: high-model
+  ports:
+  - port: 8001
+    targetPort: 8001
