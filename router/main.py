@@ -16,6 +16,15 @@ CPU_THRESHOLD = float(os.getenv("CPU_THRESHOLD", "75.0"))
 ERROR_RATE_THRESHOLD = float(os.getenv("ERROR_RATE_THRESHOLD", "0.05"))
 IN_FLIGHT_THRESHOLD = int(os.getenv("IN_FLIGHT_THRESHOLD", "1"))
 
+RECOVERY_COOLDOWN_SECONDS = float(os.getenv("RECOVERY_COOLDOWN_SECONDS", "5.0"))
+
+router_state = {
+    "currently_routing_to_fast": False,
+    "last_overloaded_time": 0.0,
+    "last_decision": "route_to_high_accuracy_model",
+    "last_reasons": ["within_sla"]
+}
+
 app = FastAPI(title="SLA-Aware Router")
 
 
@@ -106,6 +115,45 @@ def is_high_model_overloaded(status: dict):
 
     return len(reasons) > 0, reasons
 
+def get_stable_routing_decision(status: dict):
+    """
+    Prevents flickering between Model A and Model B.
+
+    If Model A becomes busy, route to Model B immediately.
+    After Model A becomes free, wait for RECOVERY_COOLDOWN_SECONDS
+    before switching back to Model A.
+    """
+
+    now = time.time()
+    overloaded, reasons = is_high_model_overloaded(status)
+
+    if overloaded:
+        router_state["currently_routing_to_fast"] = True
+        router_state["last_overloaded_time"] = now
+        router_state["last_decision"] = "route_to_fast_model"
+        router_state["last_reasons"] = reasons
+        return True, reasons, "route_to_fast_model"
+
+    # If Model A is now free, do not immediately switch back.
+    # Wait for cooldown to avoid flickering.
+    time_since_overload = now - router_state["last_overloaded_time"]
+
+    if router_state["currently_routing_to_fast"] and time_since_overload < RECOVERY_COOLDOWN_SECONDS:
+        remaining = round(RECOVERY_COOLDOWN_SECONDS - time_since_overload, 2)
+        reasons = [f"recovery_cooldown_active_{remaining}s"]
+
+        router_state["last_decision"] = "route_to_fast_model"
+        router_state["last_reasons"] = reasons
+
+        return True, reasons, "route_to_fast_model"
+
+    # Model A has been stable long enough. Route back to Model A.
+    router_state["currently_routing_to_fast"] = False
+    router_state["last_decision"] = "route_to_high_accuracy_model"
+    router_state["last_reasons"] = ["high_accuracy_model_available"]
+
+    return False, ["high_accuracy_model_available"], "route_to_high_accuracy_model"
+
 
 def forward_batch(model_url: str, files: List[UploadFile]):
     multipart_files = []
@@ -150,13 +198,14 @@ def health():
 def routing_state():
     try:
         high_status = get_model_status(HIGH_MODEL_URL)
-        overloaded, reasons = is_high_model_overloaded(high_status)
+        overloaded, reasons, decision = get_stable_routing_decision(high_status)
 
         return {
             "high_model_status": high_status,
             "high_model_overloaded": overloaded,
-            "routing_reasons": reasons if reasons else ["within_sla"],
-            "current_decision": "route_to_fast_model" if overloaded else "route_to_high_accuracy_model"
+            "routing_reasons": reasons,
+            "current_decision": decision,
+            "recovery_cooldown_seconds": RECOVERY_COOLDOWN_SECONDS
         }
 
     except Exception as e:
@@ -175,7 +224,7 @@ def predict_batch(files: List[UploadFile] = File(...)):
 
     try:
         high_status = get_model_status(HIGH_MODEL_URL)
-        overloaded, routing_reason = is_high_model_overloaded(high_status)
+        overloaded, routing_reason, decision = get_stable_routing_decision(high_status)
 
         if overloaded:
             selected_model = "Model B - Optimized Fast Model"

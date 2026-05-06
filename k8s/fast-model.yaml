@@ -13,16 +13,25 @@ spec:
         app: fast-model
     spec:
       containers:
-      - name: fast-model
-        image: fast-model:latest
-        imagePullPolicy: Never
-        ports:
-        - containerPort: 8002
-        env:
-        - name: MODEL_ARCH
-          value: "resnet50"
-        - name: MODEL_LABEL
-          value: "Model B - Optimized Fast ResNet50"
+        - name: fast-model
+          image: fast-model:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8002
+          env:
+            - name: MODEL_ARCH
+              value: "resnet50"
+            - name: MODEL_LABEL
+              value: "Model B - Optimized Fast ResNet50"
+            - name: PROCESSING_DELAY_PER_IMAGE
+              value: "0.3"
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "384Mi"
+            limits:
+              cpu: "800m"
+              memory: "768Mi"
 ---
 apiVersion: v1
 kind: Service
@@ -32,5 +41,5 @@ spec:
   selector:
     app: fast-model
   ports:
-  - port: 8002
-    targetPort: 8002
+    - port: 8002
+      targetPort: 8002

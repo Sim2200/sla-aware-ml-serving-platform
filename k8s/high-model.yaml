@@ -13,16 +13,25 @@ spec:
         app: high-model
     spec:
       containers:
-      - name: high-model
-        image: high-model:latest
-        imagePullPolicy: Never
-        ports:
-        - containerPort: 8001
-        env:
-        - name: MODEL_ARCH
-          value: "resnet101"
-        - name: MODEL_LABEL
-          value: "Model A - High Accuracy ResNet101"
+        - name: high-model
+          image: high-model:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8001
+          env:
+            - name: MODEL_ARCH
+              value: "resnet101"
+            - name: MODEL_LABEL
+              value: "Model A - High Accuracy ResNet101"
+            - name: PROCESSING_DELAY_PER_IMAGE
+              value: "2.0"
+          resources:
+            requests:
+              cpu: "300m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
 ---
 apiVersion: v1
 kind: Service
@@ -32,5 +41,5 @@ spec:
   selector:
     app: high-model
   ports:
-  - port: 8001
-    targetPort: 8001
+    - port: 8001
+      targetPort: 8001
