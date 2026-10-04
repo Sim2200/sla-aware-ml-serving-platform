@@ -1,10 +1,12 @@
 # SLA-Aware Multi-Variant ML Serving Platform
 
 > **Team course project (MSML605, University of Maryland, Spring 2026, team of 2).** This is my copy of
-> the team repository, with its full commit history. **My part:** both model variants (the high-accuracy
-> model and the optimized fast model, including the ONNX quantization work), the FastAPI inference
-> services, the SLA-aware routing logic, and the Locust load testing and performance analysis. My
-> teammate owned the Kubernetes deployment, autoscaling, Prometheus/Grafana and the canary controller.
+> the team repository, with its full commit history. **My part:** setting up the AWS EKS cluster
+> (Kubernetes deployment, HPA autoscaling, Prometheus/Grafana monitoring and the canary rollout), both
+> model variants (the high-accuracy model and the optimized fast model, including the ONNX quantization
+> work), the FastAPI inference services, the SLA-aware routing logic, and the Locust load testing and
+> performance analysis. The code was uploaded to the shared repository from my teammate's account, which
+> is why the early commits carry their name.
 >
 > Result from our load tests: under high load the SLA-aware router cut p95 latency from 30+ s to about
 > 5 s and the error rate from 5–10% to 0–2%, compared with sending everything to the high-accuracy model.
